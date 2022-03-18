@@ -1,0 +1,69 @@
+image:
+  repository: kibana
+  tag: 7.9.2 # Define your Kibana version (be careful, logtail working only up to 7.9.2 Kibana version)
+  pullPolicy: IfNotPresent
+
+envFromSecrets:
+  ELASTICSEARCH_USERNAME:
+     from:
+      secret: kibana-secrets
+      key: ELASTICSEARCH_USERNAME
+  ELASTICSEARCH_PASSWORD:
+     from:
+      secret: kibana-secrets
+      key: ELASTICSEARCH_PASSWORD
+  ELASTICSEARCH_HOSTS:
+     from:
+      secret: kibana-secrets
+      key: ELASTICSEARCH_HOSTS
+
+files:
+  kibana.yml:
+    # Define your kibana URI if it's needed
+    server.basePath: /kibana
+    server.rewriteBasePath: true
+    # Define your kibana index name
+    kibana.index: ".kibana-qa01"
+    # Define your reporting index name, if you would like to generate reports
+    xpack.reporting.index: ".kibana-reports-qa01"
+    # Define your security encryption key (32 symbols)
+    xpack.security.encryptionKey: "PDcmcVGhGrmhzfPQLJXBCv4jZ67q27sh"
+    # Define your security saved objects encryption key (to enable alerts) (32 symbols)
+    xpack.encryptedSavedObjects.encryptionKey: "hdSrZWFudR536q4NvAFz3JsXU5h12bff"
+
+plugins:
+  enabled: true
+  values: # Define your LogTrail plugin version (depends on Kibana version)
+    - logtrail,0.1.31,https://github.com/sivasamyk/logtrail/releases/download/v0.1.31/logtrail-7.9.2-0.1.31.zip
+
+extraConfigMapMounts:
+  - name: logtrail-configs
+    configMap: logtrail-config
+    mountPath: /usr/share/kibana/plugins/logtrail/logtrail.json
+    subPath: logtrail.json
+
+service:
+  externalPort: 5601
+  internalPort: 5601
+
+ingress:
+  enabled: true
+  # Define your kibana's domain
+  hosts:
+    - kibana.my-domain.net
+
+podAnnotations:
+  filebeat_logs: "false"
+
+livenessProbe:
+  enabled: false
+  path: /kibana/login
+  initialDelaySeconds: 60
+  timeoutSeconds: 30
+
+readinessProbe:
+  enabled: false
+  path: /kibana/login
+  initialDelaySeconds: 60
+  timeoutSeconds: 30
+  periodSeconds: 5
